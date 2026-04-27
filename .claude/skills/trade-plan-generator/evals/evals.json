@@ -1,0 +1,47 @@
+{
+  "skill_name": "trade-plan-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "give me a trade plan for NVDA",
+      "expected_output": "A complete SEPA trade plan for NVDA including: SEPA status with trend template pass/fail for all 8 criteria, VCP setup assessment, entry zone with pivot price, stop loss with dollar amount and percentage, position sizing based on $100k assumed account, 2R/3R profit targets, and exit watch rules. Should clearly show MA values and 52-week high/low context.",
+      "files": [],
+      "assertions": [
+        {"name": "uses-exact-template-format", "description": "Output uses the exact bordered template with ═══ lines and all required section headers", "type": "contains", "value": "═══════════════════════════════════════════════"},
+        {"name": "has-sepa-status-line", "description": "Output includes the SEPA STATUS line", "type": "contains", "value": "SEPA STATUS"},
+        {"name": "has-trend-template-section", "description": "Trend template section present with MA comparisons", "type": "contains", "value": "TREND TEMPLATE"},
+        {"name": "has-vcp-section", "description": "Output includes VCP SETUP section", "type": "contains", "value": "VCP SETUP"},
+        {"name": "has-2r-target", "description": "Profit targets section includes 2R target", "type": "contains", "value": "2R target"},
+        {"name": "has-exit-watch", "description": "Output includes EXIT WATCH section", "type": "contains", "value": "EXIT WATCH"},
+        {"name": "has-position-sizing", "description": "Output includes POSITION SIZING section", "type": "contains", "value": "POSITION SIZING"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "is SMCI a good setup right now? walk me through the trade",
+      "expected_output": "A complete trade plan for SMCI that prominently surfaces SEPA violations with explanations of why each matters, but still produces full entry/stop/target numbers. Should flag Stage 2 failure clearly.",
+      "files": [],
+      "assertions": [
+        {"name": "uses-exact-template-format", "description": "Output uses the exact bordered template with ═══ lines", "type": "contains", "value": "═══════════════════════════════════════════════"},
+        {"name": "has-sepa-status-fail", "description": "SEPA STATUS clearly shows failure", "type": "contains", "value": "FAIL"},
+        {"name": "has-violations-section", "description": "Output includes a VIOLATIONS section", "type": "contains", "value": "VIOLATIONS"},
+        {"name": "violations-explain-why", "description": "Violation descriptions explain trading significance, not just pass/fail", "type": "manual", "value": "Each violation bullet explains why the criterion matters for trend trading"},
+        {"name": "still-produces-targets", "description": "Despite violations, plan still produces 2R/3R targets (soft-gate)", "type": "contains", "value": "2R target"},
+        {"name": "has-stop-loss", "description": "Output includes a concrete stop loss price", "type": "contains", "value": "Stop loss"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "plan a trade on PLTR, I have a $50k account",
+      "expected_output": "A complete trade plan for PLTR with position sizing correctly calculated for $50,000 account. Risk per trade should be $500 (1% of $50k). Should detect Stage 2 status and flag violations if any.",
+      "files": [],
+      "assertions": [
+        {"name": "uses-exact-template-format", "description": "Output uses the exact bordered template with ═══ lines", "type": "contains", "value": "═══════════════════════════════════════════════"},
+        {"name": "uses-50k-account-size", "description": "Position sizing uses $50,000 account (not the $100k default)", "type": "contains", "value": "$50,000"},
+        {"name": "risk-is-500", "description": "Risk per trade is calculated as $500 (1% of $50k)", "type": "contains", "value": "$500"},
+        {"name": "has-2r-target", "description": "Output includes a 2R profit target", "type": "contains", "value": "2R target"},
+        {"name": "has-exit-watch", "description": "Output includes EXIT WATCH section", "type": "contains", "value": "EXIT WATCH"}
+      ]
+    }
+  ]
+}
