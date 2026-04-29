@@ -21,13 +21,27 @@ Scan a stock universe for Minervini Stage 2 / VCP candidates using parallel sub-
 
 ---
 
+## Data Requirements
+
+| Field | Source | Tool |
+|---|---|---|
+| Daily OHLCV (252+ bars) | Massive MCP | `mcp__Massive_Market_Data__query_data` |
+| Current price | Massive MCP | most recent close from OHLCV |
+| Universe / constituents | Massive MCP | `mcp__Massive_Market_Data__call_api` |
+| Sector and industry | Yahoo Finance | `mcp__yahoo-finance__get_stock_info` → `sector`, `industry` (fetched per passing ticker after Trend Template screen) |
+
+If Massive MCP is unavailable, the scanner cannot run — say so and do not produce a partial result. If Yahoo Finance is unavailable, proceed with sector = "Unknown" and note it in the output.
+
+---
+
 ## Step 1 — Resolve the Universe
 
 Default universe: **S&P 500 + Nasdaq 100** (~550 unique tickers after deduplication).
 
 If the user specifies a different universe (e.g., "just Nasdaq", "my watchlist: AAPL, MSFT, NVDA"), use that instead.
 
-To get ticker lists, use Massive MCP. Common endpoints:
+To get ticker lists, use Massive MCP via `mcp__Massive_Market_Data__call_api`. Common endpoints:
+
 - S&P 500 constituents
 - Nasdaq 100 constituents
 
@@ -82,31 +96,47 @@ Also calculate for each passing ticker:
 - pct_from_52w_high = (current_price - high_52w) / high_52w * 100  (negative = below high)
 - criteria_passed = count of passing criteria
 
-If data fetch fails for a ticker, skip it silently.
+For each ticker that PASSES all 8 criteria, also call mcp__yahoo-finance__get_stock_info to get the `sector` and `industry` fields. Use the `sector` value in the output. If Yahoo Finance is unavailable or the call fails for a ticker, set sector = "Unknown".
 
-Return ONLY a JSON array of passing tickers:
-[
-  {
-    "ticker": "AAPL",
-    "price": 195.50,
-    "ma50": 188.20,
-    "ma150": 182.10,
-    "ma200": 175.40,
-    "high_52w": 198.00,
-    "low_52w": 142.00,
-    "pct_from_52w_high": -1.3,
-    "criteria_passed": 8
-  }
-]
+If data fetch fails for a ticker, do NOT skip silently. Return an entry for that ticker with the error so the main scanner can report it.
 
-Return an empty array [] if no tickers pass. Return only the JSON, no other text.
+Return ONLY a JSON object with two keys, `passes` and `errors`:
+{
+  "passes": [
+    {
+      "ticker": "AAPL",
+      "price": 195.50,
+      "ma50": 188.20,
+      "ma150": 182.10,
+      "ma200": 175.40,
+      "high_52w": 198.00,
+      "low_52w": 142.00,
+      "pct_from_52w_high": -1.3,
+      "criteria_passed": 8,
+      "sector": "Technology"
+    }
+  ],
+  "errors": [
+    {"ticker": "XYZ", "reason": "rate-limited after 1 retry"},
+    {"ticker": "OLDCO", "reason": "fewer than 252 bars of history"}
+  ]
+}
+
+Return `{"passes": [], "errors": [...]}` if nothing passes. Return only the JSON, no other text.
 ```
 
 ---
 
-## Step 3 — Collect, Merge, and Rank Results
+## Step 3 — Collect, Merge, Rank, and Audit Failures
 
-Once all sub-agents return, merge their JSON arrays. Then rank by quality:
+Once all sub-agents return, merge their `passes` arrays AND their `errors` arrays.
+
+**Audit the errors first.** Compute `failure_rate = errors_count / total_tickers_scanned`.
+
+- If `failure_rate > 5%`: stop and report to the user. Show the failed tickers and reasons. Ask whether to retry the failed batch or proceed with a partial scan. Do not silently produce a result based on >5% missing data.
+- If `failure_rate ≤ 5%`: proceed to ranking, but include the failed-ticker count in the output so the user knows the scan wasn't complete.
+
+Then rank the `passes`:
 
 **Primary sort**: `pct_from_52w_high` descending (closest to 52w high = tightest setup, most actionable)
 
@@ -125,22 +155,30 @@ Use this exact format:
 ```
 ═══════════════════════════════════════════════
   MARKET SCAN — [UNIVERSE]             [DATE]
-  [N] tickers scanned → [M] Stage 2 candidates
+  [N] scanned → [M] Stage 2 candidates  ([F] failed)
 ═══════════════════════════════════════════════
 
-RANK  TICKER   PRICE    FROM HIGH   CRITERIA
-────────────────────────────────────────────
-  1   NVDA    $189.31    -2.1%       8/8  ⭐
-  2   AAPL    $195.50    -4.5%       8/8  ⭐
-  3   MSFT    $412.00    -6.2%       8/8
-  4   META    $580.20    -8.1%       8/8
-  5   AVGO    $215.40    -9.4%       7/8
+RANK  TICKER   PRICE    FROM HIGH   CRITERIA   SECTOR
+─────────────────────────────────────────────────────
+  1   NVDA    $189.31    -2.1%       8/8  ⭐   Semis
+  2   AAPL    $195.50    -4.5%       8/8  ⭐   Tech
+  3   MSFT    $412.00    -6.2%       8/8        Tech
+  4   META    $580.20    -8.1%       8/8        Internet
+  5   AVGO    $215.40    -9.4%       7/8        Semis
   ...
 
 ⭐ = within 5% of 52-week high (prime buy zone)
 
+[If F > 0:]
+─────────────────────────────────────────────────────
+  FAILED FETCHES ([F] tickers, [P]% of universe)
+─────────────────────────────────────────────────────
+  XYZ — rate-limited after 1 retry
+  OLDCO — fewer than 252 bars of history
+  ...
+
 ────────────────────────────────────────────
-Saved full results to: Swing Trading/scan_[DATE].csv
+Saved full results to: Screener Results/scan_[DATE].csv
 ────────────────────────────────────────────
 
 Would you like me to generate full trade plans for the top 3 setups?
@@ -153,9 +191,11 @@ The ⭐ flag applies to any ticker within 5% of its 52-week high — these are t
 ## Step 5 — Save to CSV
 
 Save the full ranked list (all Stage 2 candidates, not just top 20) to:
-`/[workspace]/Swing Trading/scan_[YYYY-MM-DD].csv`
+`Screener Results/scan_[YYYY-MM-DD].csv` (relative to the project root — `d:\Claude\Swing Trading\Screener Results\`)
 
-CSV columns: `rank, ticker, price, ma50, ma150, ma200, high_52w, low_52w, pct_from_52w_high, criteria_passed`
+CSV columns: `rank, ticker, price, ma50, ma150, ma200, high_52w, low_52w, pct_from_52w_high, criteria_passed, sector`
+
+If failures occurred, also write `Screener Results/scan_[YYYY-MM-DD]_errors.csv` with columns `ticker, reason` so the user can audit which names were missed.
 
 ---
 

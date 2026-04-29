@@ -57,14 +57,17 @@ Fetch the data first (see Data Requirements below), then evaluate:
 
 ## Data Requirements
 
-For ALL strategies, fetch via Massive MCP:
+| Field | Source | Tool |
+|---|---|---|
+| Daily OHLCV (252+ bars) | Massive MCP | `mcp__Massive_Market_Data__query_data` |
+| Current price and volume | Massive MCP | `mcp__Massive_Market_Data__query_data` |
+| 50/200-day MAs, RSI(2), RSI(14), ATR(14) | Massive MCP | computed from OHLCV |
+| VIX level (Volatility-Based strategy) | Massive MCP | `mcp__Massive_Market_Data__call_api` — fall back to ATR ratio if unavailable; say so |
+| Leverage factor | Massive MCP | `mcp__Massive_Market_Data__call_api` — or use `Leveraged ETFs Reference` table below |
+| Live bid/ask | eToro | `mcp__etoro__etoro_get_rates` (optional — use Massive close if unavailable) |
+| Account equity | eToro | `mcp__etoro__etoro_get_portfolio` → `credit` |
 
-- **252+ trading days** of daily OHLCV data for the ETF
-- **Current price and volume**
-- **50-day and 200-day moving averages**
-- **RSI(2) and RSI(14)** — calculate from close prices
-- **ATR(14)** — Average True Range for volatility measurement
-- **VIX level** (if available via Massive MCP; if not, use ATR as volatility proxy)
+If Massive MCP is unavailable, ask the user to paste price/volume data and skip any strategy that requires VIX. Do not silently substitute a different data source.
 
 ### RSI Calculation
 

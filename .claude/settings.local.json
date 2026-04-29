@@ -1,7 +1,36 @@
 {
   "permissions": {
     "allow": [
-      "Bash(claude mcp *)"
+      "Read(//d/Claude/Swing Trading/**)",
+      "Write(//d/Claude/Swing Trading/Trade Plans/**)",
+      "Write(//d/Claude/Swing Trading/Screener Results/**)",
+      "Write(//d/Claude/Swing Trading/SEPA Scans/**)",
+      "Edit(//d/Claude/Swing Trading/Open Positions.md)",
+      "Edit(//d/Claude/Swing Trading/Trade Journal.md)",
+      "Edit(//d/Claude/Swing Trading/Watchlist.md)",
+      "Edit(//d/Claude/Swing Trading/Weekly Review.md)",
+      "Edit(//d/Claude/Swing Trading/Performance Stats.md)",
+      "mcp__Massive_Market_Data__query_data",
+      "mcp__Massive_Market_Data__call_api",
+      "mcp__yahoo-finance__get_stock_info",
+      "mcp__yahoo-finance__get_yahoo_finance_news",
+      "mcp__yahoo-finance__get_financial_statement",
+      "mcp__yahoo-finance__get_recommendations",
+      "mcp__yahoo-finance__get_historical_stock_prices",
+      "mcp__etoro__etoro_get_portfolio",
+      "mcp__etoro__etoro_get_trade_history",
+      "mcp__etoro__etoro_get_orders",
+      "mcp__etoro__etoro_search_instruments",
+      "mcp__etoro__etoro_get_candles",
+      "mcp__etoro__etoro_get_rates",
+      "mcp__etoro__etoro_open_position",
+      "mcp__etoro__etoro_close_position",
+      "mcp__etoro__etoro_place_limit_order",
+      "mcp__etoro__etoro_cancel_order",
+      "Bash(claude mcp list)"
+    ],
+    "deny": [
+      "Read(//d/Claude/Swing Trading/.env)"
     ]
   }
 }

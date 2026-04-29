@@ -10,6 +10,21 @@ tags: swing-trading, momentum, technical-analysis, stocks, trading, finance, tre
 
 Mark Minervini is a 3-time US Investing Champion who turned $100,000 into over $30 million. His SEPA (Specific Entry Point Analysis) methodology combines trend analysis, volatility contraction patterns, and strict risk management into a repeatable system. He emphasizes buying leading stocks at specific low-risk entry points within confirmed uptrends.
 
+## Data Requirements
+
+| Field | Source | Tool |
+|---|---|---|
+| Daily OHLCV (252+ bars) | Massive MCP | `mcp__Massive_Market_Data__query_data` |
+| Current price and today's volume | Massive MCP | `mcp__Massive_Market_Data__query_data` |
+| 50-day average volume | Massive MCP | computed from OHLCV |
+| Next earnings date | Yahoo Finance | `mcp__yahoo-finance__get_stock_info` → `earningsTimestamp` (Unix seconds → date); fall back to `earningsTimestampStart`. **No `nextEarningsDate` field exists.** |
+| Sector and industry | Yahoo Finance | `mcp__yahoo-finance__get_stock_info` → `sector`, `industry` |
+| RS Rating (if available) | Yahoo Finance | `mcp__yahoo-finance__get_recommendations` |
+| Live bid/ask | eToro | `mcp__etoro__etoro_get_rates` (optional — use Massive close if unavailable) |
+| Account equity | eToro | `mcp__etoro__etoro_get_portfolio` → `credit` |
+
+Risk parameters (1% per trade, 8% max stop, 25% position cap) live in `Risk Rules.md` — this skill defers to that file.
+
 ## Core Philosophy
 
 > "The goal is not to buy low and sell high. It's to buy high and sell higher."
@@ -91,11 +106,12 @@ C = Contraction (price tightening)
 - Set stop at 7-8% maximum (tighter if possible based on structure)
 - Have a sell plan BEFORE you enter
 - Trade liquid stocks (avg volume > 400K)
+- Apply `Risk Rules.md` §6 for earnings exposure: no new entry within 5 trading days of earnings; hold through earnings only if up >2R AND a portion has already been taken off
 
 ### Never
 
 - Buy a stock in Stage 1, 3, or 4
-- Chase extended stocks (>10% above pivot)
+- Chase extended stocks (>5% above pivot — see Risk Rules.md)
 - Average down on a losing position
 - Hold through an 8%+ loss
 - Buy on light volume breakouts

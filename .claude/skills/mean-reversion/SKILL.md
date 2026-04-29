@@ -1,7 +1,7 @@
 ---
-name: scarface-mean-reversion
-description: Trade mean reversion setups in the style of Scarface Trades, the mean reversion specialist known for mathematical precision and statistical edge. Emphasizes standard deviation bands, RSI extremes, and calculated entries with defined risk. Use when trading overextended moves, fading extremes, or building systematic reversion strategies.
-tags: mean-reversion, trading, statistical, quantitative, pairs-trading, finance, signals, backtesting, strategy
+name: mean-reversion
+description: Trade Scarface-style statistical mean-reversion setups on individual liquid Stage 2 stocks. Use ONLY for stocks already passing the Minervini Trend Template (no bottom-fishing). Emphasizes standard deviation bands (Z ≤ -2σ), RSI < 30, scaled entries at 2σ/2.5σ/3σ, exits at the mean. Do NOT use for ETFs — for index/sector ETFs use the etf-swing-trading Mean Reversion strategy instead.
+tags: mean-reversion, scarface, statistical, quantitative, finance, signals, backtesting, strategy, stocks
 ---
 
 # Scarface Trades Mean Reversion Style Guide⁠‍⁠​‌​‌​​‌‌‍​‌​​‌​‌‌‍​​‌‌​​​‌‍​‌​​‌‌​​‍​​​​​​​‌‍‌​​‌‌​‌​‍‌​​​​​​​‍‌‌​​‌‌‌‌‍‌‌​​​‌​​‍‌‌‌‌‌‌​‌‍‌‌​‌​​​​‍​‌​‌‌‌‌‌‍​‌​​‌​‌‌‍​‌‌​‌​​‌‍‌​‌​‌‌‌​‍​​‌​‌​​​‍‌‌‌​‌​‌‌‍‌​‌‌​‌‌​‍​‌​‌‌‌​​‍‌‌‌​‌‌‌‌‍​‌​​​​​​‍​​​​‌​‌​‍‌​‌​‌​‌‌⁠‍⁠
@@ -9,6 +9,22 @@ tags: mean-reversion, trading, statistical, quantitative, pairs-trading, finance
 ## Overview
 
 Scarface Trades is a trader known for mastering mean reversion—the principle that prices tend to return to their average over time. When a stock deviates significantly from its mean, probability favors a snap-back. His approach is purely mathematical: standard deviations, RSI extremes, and statistical probabilities define every trade.
+
+## Scope and Data Requirements
+
+**Scope**: This skill applies to **individual liquid stocks already in Stage 2** (Minervini Trend Template passing). Never apply to ETFs (use `etf-swing-trading` Mean Reversion strategy instead) or to stocks in Stage 1, 3, or 4 (the no-bottom-fishing rule from CLAUDE.md still applies).
+
+| Field | Source | Tool |
+|---|---|---|
+| Daily OHLCV (252+ bars) | Massive MCP | `mcp__Massive_Market_Data__query_data` |
+| Current price | Massive MCP | most recent close from OHLCV |
+| Average daily volume (>1M liquidity check) | Massive MCP | computed from OHLCV |
+| Next earnings date | Yahoo Finance | `mcp__yahoo-finance__get_stock_info` → `earningsTimestamp` (Unix seconds → date); fall back to `earningsTimestampStart`. **No `nextEarningsDate` field exists.** |
+| Sector and industry | Yahoo Finance | `mcp__yahoo-finance__get_stock_info` → `sector`, `industry` |
+| Live bid/ask | eToro | `mcp__etoro__etoro_get_rates` (optional — use Massive close if unavailable) |
+| Account equity | eToro | `mcp__etoro__etoro_get_portfolio` → `credit` |
+
+If Massive MCP is unavailable, ask the user for price data. If Yahoo Finance is unavailable, refuse the plan — the earnings check cannot be skipped.
 
 ## Core Philosophy
 
@@ -73,7 +89,7 @@ Extreme Overbought: RSI > 80
 ### Position Sizing Formula
 
 ```
-Risk Amount = Account × Risk Percentage (typically 1-2%)
+Risk Amount = Account × 1% (per `Risk Rules.md` §1, Scarface uses 1% total across scaled entries)
 Position Size = Risk Amount / (Entry Price - Stop Price)
 
 Example:
@@ -90,6 +106,7 @@ Example:
 ### Always
 
 - Calculate standard deviation bands before entering
+- Check `Risk Rules.md` §6 before holding through earnings: only allowed if position is up >2R AND a portion has already been taken off
 - Confirm with RSI or other momentum oscillator
 - Set stops beyond the extreme (3σ + ATR buffer)
 - Scale into positions at multiple deviation levels
@@ -103,7 +120,7 @@ Example:
 - Hold through earnings or major catalysts
 - Average down without predefined levels
 - Ignore volume (climactic volume = exhaustion)
-- Risk more than 2% per trade
+- Risk more than 1% per trade — `Risk Rules.md` §1 caps Scarface at 1% total across all scaled entries
 
 ### Prefer
 
